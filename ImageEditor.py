@@ -19,12 +19,8 @@ def merger(a, b):
         merged.append(a[i])
     for i in range(len(b)):
         merged.append(b[i])
-    '''
-    del a, b
-    print ("begin GC")
-    gc.collect()
-    print ("end GC")
-    '''
+    del a
+    del b
     return merged
 
 # sorts rows based on brightness
@@ -40,7 +36,7 @@ def mergesort(rows):
             return [rows[0], rows[1]]
         else:
             return [rows[1], rows[0]]
-    return rows
+    return 0
 
 # defines an aggregate value used for sorting row "brightness"
 def aggregateValue(row):
@@ -51,12 +47,15 @@ def aggregateValue(row):
 
 # taken a list representing the photo and rotates it 90 degrees CCW
 def rotatePhoto(rows):
-    return asarray(np.rot90(np.array(rows))).tolist()
+    rows = asarray(np.rot90(np.array(rows))).tolist()
+    return 0
 
 # sorts, rotates 90 degrees, then sorts again
     # NOTE: ONLY WORKS FOR SMALLER IMAGES (Memory problems when using larger photos)
 def doubleSortRotate(rows):
-    return rotatePhoto(mergesort(rotatePhoto(mergesort(rows))))
+    rows = rotatePhoto(mergesort(rows))
+    rows =  rotatePhoto(mergesort(rows))
+    return 0
 
 def multiply(filter, rows):
     if type(filter) == 'int':
