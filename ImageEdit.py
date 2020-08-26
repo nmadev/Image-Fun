@@ -19,12 +19,6 @@ def merger(a, b):
         merged.append(a[i])
     for i in range(len(b)):
         merged.append(b[i])
-    '''
-    del a, b
-    print ("begin GC")
-    gc.collect()
-    print ("end GC")
-    '''
     return merged
 
 # sorts rows based on brightness
@@ -58,8 +52,9 @@ def rotatePhoto(rows):
 def doubleSortRotate(rows):
     return rotatePhoto(mergesort(rotatePhoto(mergesort(rows))))
 
+# multiplies each color value of each pixel by 
 def multiply(filter, rows):
-    if type(filter) == 'int':
+    if (isinstance(filter, int)):
         for i in range(len(rows)):
             for j in range(len(rows[i])):
                 rows[i][j][filter] = 255
@@ -68,21 +63,110 @@ def multiply(filter, rows):
             for j in range(len(rows[i])):
                 for k in range(len(rows[i][j])):
                     rows[i][j][k] = filter[i][j][k] / 255 * rows[i][j][k]
-    return 0
+    return rows
             
-
-#def reduceColor(rows):
+# transforms each pixel into either red, green, or blue, depending on which color was most present in the original picture 
+def maxrgb(rows):
+    for i in range(len(rows)):
+        for j in range(len(rows[i])):
+            brightest = (rows[i][j]).index(max(rows[i][j]))
+            for k in range(len(rows[i][j])):
+                if k == brightest: 
+                    rows[i][j][k] = 255
+                else:
+                    rows[i][j][k] = 0
+    return rows
     
+# blurs the photo with a given blur radius (not very efficient but it works so better for small images) 
+def blur(radius, rows):
+    for i in range(len(rows)):
+        for j in range(len(rows[i])):
+            avePixel = [0, 0, 0]
+            count = 0
+            for n in range(-1 * radius, radius + 1):
+                for m in range(-1 * radius, radius + 1):
+                    if i + n in range(len(rows)) and j + m in range(len(rows[0])):
+                        avePixel[0] += rows[i + n][j + m][0]
+                        avePixel[1] += rows[i + n][j + m][1]
+                        avePixel[2] += rows[i + n][j + m][2]
+                        count += 1
+            avePixel[0] /= count 
+            avePixel[1] /= count 
+            avePixel[2] /= count 
+            rows[i][j] = avePixel
+    return rows
 
-# loads image as a multi-dimensional list
-image = Image.open('Images\Daisies.jpg')
+# changes each pixel into the average RGB value of that pixel to convert the photo to black and white
+def bw(rows):
+    for i in range(len(rows)):
+        for j in range(len(rows[i])):
+            rows[i][j] = (rows[i][j][0] + rows[i][j][1] + rows[i][j][2])/3
+    return rows
 
-data = asarray(image).tolist()
+# takes a list representing the image and puts it in a format the PIL can read to an image
+def toImage(rows):
+    return Image.fromarray((np.array(rows)).astype(np.uint8))
 
-lowPass = doubleSortRotate(data)
-multiply(lowPass, data)
-data = (np.array(data)).astype(np.uint8)
+folder = 'TestImages'
+directory = os.fsencode(folder)
 
-# creates image from the list and displays it
-image2 = Image.fromarray(data)
-image2.show()
+# iterate through each photo in a given folder
+for file in os.listdir(directory):
+    filepath = os.fsdecode(file)
+    if filepath.endswith(".jpg"):
+        path = folder + '/' + filepath
+        originalImage = Image.open(path)
+        fileSize = os.stat(path).st_size
+        # makes a folder based on the image name that all manipulated photos are saved to
+        os.mkdir(folder + '/' + filepath[:-4])
+        # reads the image as a numpy array and converts to a list, then saves the image
+            # repeated for every method to generate the original image
+        dataCopy = asarray(originalImage).tolist()
+        newImage = toImage(mergesort(dataCopy))
+        newImage.save(folder + '/' + filepath[:-4] + '/' + filepath[:-4] + 'Merge.jpg', "JPEG")
+        print (filepath[:-4] + " mergesort finished")
+
+        dataCopy = asarray(originalImage).tolist()
+        newImage = toImage(maxrgb(dataCopy))
+        newImage.save(folder + '/' + filepath[:-4] + '/' + filepath[:-4] + 'madRGB.jpg', "JPEG")
+        print (filepath[:-4] + " maxRGB finished")
+
+        dataCopy = asarray(originalImage).tolist()
+        newImage = toImage(bw(dataCopy))
+        newImage.save(folder + '/' + filepath[:-4] + '/' + filepath[:-4] + 'BW.jpg', "JPEG")
+        print (filepath[:-4] + " black and white finished")
+
+        dataCopy = asarray(originalImage).tolist()
+        newImage = toImage(multiply(0, dataCopy))
+        newImage.save(folder + '/' + filepath[:-4] + '/' + filepath[:-4] + 'RED.jpg', "JPEG")
+        print (filepath[:-4] + " RED finished")
+        dataCopy = asarray(originalImage).tolist()
+        newImage = toImage(multiply(1, dataCopy))
+        newImage.save(folder + '/' + filepath[:-4] + '/' + filepath[:-4] + 'GREEN.jpg', "JPEG")
+        print (filepath[:-4] + " GREEN finished")
+        dataCopy = asarray(originalImage).tolist()
+        newImage = toImage(multiply(2, dataCopy))
+        newImage.save(folder + '/' + filepath[:-4] + '/' + filepath[:-4] + 'BLUE.jpg', "JPEG")
+        print (filepath[:-4] + " BLUE finished")
+
+        # blur and double sort are very time intensive so we only limit this to smaller photos
+        if fileSize < 350000 or len(dataCopy) < 1500:
+
+            dataCopy = asarray(originalImage).tolist()
+            newImage = toImage(blur(3, dataCopy))
+            newImage.save(folder + '/' + filepath[:-4] + '/' + filepath[:-4] + 'blur3.jpg', "JPEG")
+            print (filepath[:-4] + " blur radius 3 finished")
+
+            dataCopy = asarray(originalImage).tolist()
+            lowpass = asarray(originalImage).tolist()
+            lowpass = doubleSortRotate(lowpass)
+            newImage = toImage(lowpass)
+            newImage.save(folder + '/' + filepath[:-4] + '/' + filepath[:-4] + 'Merge.jpg', "JPEG")
+            print (filepath[:-4] + " merge finished")
+            newImage = toImage(multiply(lowpass, dataCopy))
+            newImage.save(folder + '/' + filepath[:-4] + '/' + filepath[:-4] + 'MergeFilter.jpg', "JPEG")
+            print (filepath[:-4] + " merge filter finished")
+
+        print ("FINISHED: " + filepath[:-4])
+
+print ("IMAGE MANIPULATION FINISHED")
